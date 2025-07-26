@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Map with Great-Circle Line and Search</title>
+    <title>Shortest Route Map</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
@@ -19,6 +19,7 @@
             width: 100%;
             margin: 0;
             padding: 0;
+            background-color: #1a1a1a; /* Dark background for the whole page */
         }
         /* Style for the search control container */
         .leaflet-top.leaflet-left .leaflet-control {
@@ -26,13 +27,14 @@
             margin-left: 10px;
         }
         #search-container {
-            background: white;
+            background: #2d2d2d; /* Dark background for controls */
+            color: #f0f0f0; /* Light text for controls */
             padding: 8px;
             border-radius: 5px;
-            box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+            box-shadow: 0 1px 5px rgba(0,0,0,0.5);
             display: flex;
-            flex-direction: column; /* Stack search bars vertically */
-            gap: 8px; /* Add space between search bars */
+            flex-direction: column; 
+            gap: 8px;
         }
         .search-group {
             display: flex;
@@ -44,7 +46,7 @@
             height: 12px;
             border-radius: 50%;
             margin-right: 8px;
-            border: 1px solid rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.2);
         }
         .input-wrapper {
             position: relative;
@@ -52,12 +54,17 @@
             align-items: center;
         }
         .search-input {
-            border: 1px solid #ccc;
+            background-color: #3c3c3c;
+            border: 1px solid #555;
+            color: #f0f0f0;
             border-radius: 3px;
             padding: 5px;
-            padding-right: 25px; /* Make space for the clear button */
+            padding-right: 25px; 
             font-size: 14px;
             margin-right: 5px;
+        }
+        .search-input::placeholder {
+            color: #aaa;
         }
         .clear-search {
             position: absolute;
@@ -66,28 +73,54 @@
             transform: translateY(-50%);
             cursor: pointer;
             font-size: 20px;
-            color: #999;
-            display: none; /* Hidden by default */
+            color: #ccc;
+            display: none;
         }
         .search-button {
             padding: 5px 10px;
             border-radius: 3px;
-            border: 1px solid #aaa;
-            background: #f8f8f8;
+            border: 1px solid #555;
+            background: #3c3c3c;
+            color: #f0f0f0;
             cursor: pointer;
         }
         .search-button:hover {
-            background: #eee;
+            background: #4d4d4d;
         }
-        /* Style for the new distance display */
         #distance-display {
             text-align: center; 
             padding-top: 8px; 
             font-weight: bold;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            color: #333;
-            border-top: 1px solid #eee;
+            color: #f0f0f0;
+            border-top: 1px solid #444;
             margin-top: 4px;
+        }
+        /* Dark mode styles for Leaflet's default controls */
+        .leaflet-control-zoom-in,
+        .leaflet-control-zoom-out {
+            background-color: #2d2d2d !important;
+            color: #f0f0f0 !important;
+            border-color: #555 !important;
+        }
+        .leaflet-control-zoom-in:hover,
+        .leaflet-control-zoom-out:hover {
+            background-color: #3c3c3c !important;
+        }
+        .leaflet-bar a {
+            background-color: #2d2d2d !important;
+            color: #f0f0f0 !important;
+            border-color: #555 !important;
+        }
+        .leaflet-bar a:hover {
+            background-color: #3c3c3c !important;
+        }
+        .leaflet-control-attribution {
+            background: rgba(45, 45, 45, 0.8) !important;
+            color: #bbb !important;
+        }
+        .leaflet-control-attribution a {
+            color: #8cb4ff !important;
         }
     </style>
 </head>
@@ -100,19 +133,17 @@
         const map = L.map('map', {
             worldCopyJump: true,
             minZoom: 1.4,
-            // REMOVED: All maxBounds options are removed to use a stable, custom solution.
         }).setView([20, 0], 2);
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        // Use the dark mode tile layer by default
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 	        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
 	        subdomains: 'abcd',
 	        maxZoom: 20,
             bounds: L.latLngBounds(L.latLng(-90, -180), L.latLng(90, 180))
         }).addTo(map);
 
-        // --- NEW: Stable Panning Constraint ---
-        // This logic runs *after* a pan/drag is complete, making a single, smooth correction if needed.
-        // This avoids the glitching from the previous attempts.
+        // --- Stable Panning Constraint ---
         map.on('moveend', function() {
             const padding = 100; // The visual buffer in pixels.
             const worldPixelBounds = map.getPixelWorldBounds();
@@ -125,26 +156,21 @@
             const worldTop = worldPixelBounds.min.y;
             const worldBottom = worldPixelBounds.max.y;
 
-            // Get the current center in pixels
             const currentCenterPx = map.project(map.getCenter());
             let newCenterPx = L.point(currentCenterPx.x, currentCenterPx.y);
             
             let needsCorrection = false;
 
-            // Check if the top of the view is too high
             if (viewTop < worldTop - padding) {
                 newCenterPx.y = worldTop - padding + (mapSize.y / 2);
                 needsCorrection = true;
             }
-            // Check if the bottom of the view is too low
             else if (viewBottom > worldBottom + padding) {
                 newCenterPx.y = worldBottom + padding - (mapSize.y / 2);
                 needsCorrection = true;
             }
 
             if (needsCorrection) {
-                // Convert the corrected pixel center back to Lat/Lng and pan to it.
-                // This creates a single, smooth adjustment at the end of the move.
                 map.panTo(map.unproject(newCenterPx), { animate: true, duration: 0.2 });
             }
         });
@@ -231,7 +257,8 @@
             const latlng1 = markerFamily1[0].getLatLng();
             const latlng2 = markerFamily2[0].getLatLng();
             const mainPoints = getGreatCirclePoints(latlng1, latlng2);
-            const polylineOptions = { color: 'black', weight: 3, opacity: 0.8, dashArray: '5, 10' };
+            // Changed line color to be more visible on a dark background
+            const polylineOptions = { color: '#FFFFFF', weight: 3, opacity: 0.7, dashArray: '5, 10' };
 
             for (let i = -3; i <= 3; i++) {
                 const offset = i * 360;
@@ -363,6 +390,7 @@
 
         // --- FINAL INITIALIZATION ---
         updatePolylines();
+        zoomToFitLine();
 
     </script>
 </body>
