@@ -302,11 +302,12 @@
             els.errorMessage.classList.remove('hidden');
         }
 
-        function clearMap() {
+function clearMap() {
             currentLayerGroup.clearLayers();
             els.locationInfo.classList.add('hidden');
             els.instructions.classList.remove('hidden');
             els.historyContainer.classList.add('hidden');
+            els.errorMessage.classList.add('hidden');
             els.searchInput.value = '';
             history = [];
             map.setView(CONFIG.COORDS, CONFIG.ZOOM);
