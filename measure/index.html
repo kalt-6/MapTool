@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Calculate the distance between two points on a global map.">
-    <title>Distance Calculator</title>
+    <title>MapTool - Distance Calculator</title>
     
-    <!-- CORRECTED FAVICON PATH: Go up one level (../) to find logo.png -->
+    <!-- FOOLPROOF FIX: Ensure logo.png is inside the 'measure' folder -->
     <link rel="icon" type="image/png" href="logo.png">
 
     <!-- Performance Preconnects -->
@@ -73,7 +73,7 @@
             <div class="flex items-center justify-between mb-4">
                 <h1 class="text-lg font-bold text-white flex items-center gap-2">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
-                    Distance Calculator
+                    MapTool
                 </h1>
                 <button onclick="resetMap()" aria-label="Reset Map" class="text-[10px] font-bold text-neutral-400 border border-neutral-600 hover:border-red-500 hover:text-red-500 hover:bg-red-900/20 px-3 py-1 rounded transition-all">
                     Reset
@@ -118,7 +118,7 @@
 
     <script>
         const CONFIG = {
-            POS_1: [40.71, -74.00], POS_2: [34.05, -118.24],
+            // Removed initial positions from config as they are no longer needed on load
             ZOOM: 2,
             TILE: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
             R_MI: 3958.8, R_KM: 6371,
@@ -126,16 +126,16 @@
         };
 
         let map, allPolylines;
-        const markers1 = [], markers2 = [];
+        // Markers arrays start empty
+        let markers1 = [], markers2 = [];
         const els = {};
 
         document.addEventListener('DOMContentLoaded', () => {
             ['input1', 'btn1', 'input2', 'btn2', 'distanceText', 'errorMessage', 'errorText'].forEach(id => els[id] = document.getElementById(id));
             initMap();
-            createMarkers(CONFIG.POS_1, '#3B82F6', markers1);
-            createMarkers(CONFIG.POS_2, '#EF4444', markers2);
+            // NO markers created on load
             setupEvents();
-            refresh();
+            // NO refresh called on load
         });
 
         function initMap() {
@@ -158,7 +158,12 @@
             return L.divIcon({ html: svg, className: '', iconSize: [36, 36], iconAnchor: [18, 36] });
         }
 
+        // Updated to clear existing markers before creating new ones
         function createMarkers(latlng, color, arr) {
+            // Clear existing markers from map and array
+            arr.forEach(m => map.removeLayer(m));
+            arr.length = 0; // clear array
+
             const icon = createIcon(color);
             for (let i = -3; i <= 3; i++) {
                 const m = L.marker([latlng[0], latlng[1] + (i * 360)], { draggable: true, icon }).addTo(map);
@@ -212,6 +217,13 @@
 
         function refresh() {
             allPolylines.clearLayers();
+            
+            // Only draw line if BOTH sets of markers exist
+            if (markers1.length === 0 || markers2.length === 0) {
+                els.distanceText.textContent = "0 miles";
+                return;
+            }
+
             const p1 = markers1[0].getLatLng(), p2 = markers2[0].getLatLng();
             const main = getPath(p1, p2);
             const opts = { color: '#FFFFFF', weight: 3, opacity: 0.7, dashArray: '5, 10' };
@@ -229,15 +241,16 @@
         }
 
         function setupEvents() {
-            const bind = (inp, btn, fam) => {
-                btn.addEventListener('click', () => search(inp, btn, fam));
-                inp.addEventListener('keydown', (e) => e.key === 'Enter' && search(inp, btn, fam));
+            const bind = (inp, btn, fam, color) => {
+                // Updated to pass color so we can create markers on demand
+                btn.addEventListener('click', () => search(inp, btn, fam, color));
+                inp.addEventListener('keydown', (e) => e.key === 'Enter' && search(inp, btn, fam, color));
             };
-            bind(els.input1, els.btn1, markers1);
-            bind(els.input2, els.btn2, markers2);
+            bind(els.input1, els.btn1, markers1, '#3B82F6');
+            bind(els.input2, els.btn2, markers2, '#EF4444');
         }
 
-        async function search(inp, btn, family) {
+        async function search(inp, btn, family, color) {
             const q = inp.value.trim();
             if (!q) return;
 
@@ -253,12 +266,26 @@
                 if (data?.[0]) {
                     const { lat, lon, display_name } = data[0];
                     const nLat = parseFloat(lat), nLon = parseFloat(lon);
-                    family.forEach((m, i) => m.setLatLng([nLat, nLon + ((i - 3) * 360)]));
+                    
+                    // If family (markers array) is empty, we need to create them first
+                    if (family.length === 0) {
+                        createMarkers([nLat, nLon], color, family);
+                    } else {
+                        family.forEach((m, i) => m.setLatLng([nLat, nLon + ((i - 3) * 360)]));
+                    }
+
                     inp.value = display_name.split(',')[0];
                     refresh();
                     
-                    const bounds = L.latLngBounds(getPath(markers1[0].getLatLng(), markers2[0].getLatLng()));
-                    if (bounds.isValid()) map.flyToBounds(bounds, { padding: [100, 100], maxZoom: 6 });
+                    // Only zoom if BOTH points exist
+                    if (markers1.length > 0 && markers2.length > 0) {
+                        const bounds = L.latLngBounds(getPath(markers1[0].getLatLng(), markers2[0].getLatLng()));
+                        if (bounds.isValid()) map.flyToBounds(bounds, { padding: [100, 100], maxZoom: 6 });
+                    } else {
+                        // Just pan to single point if it's the only one
+                        map.setView([nLat, nLon], 5);
+                    }
+
                 } else {
                     showError('Location not found.');
                 }
@@ -274,11 +301,13 @@
 
         function resetMap() {
             els.input1.value = els.input2.value = '';
-            [markers1, markers2].forEach((fam, idx) => {
-                const pos = idx === 0 ? CONFIG.POS_1 : CONFIG.POS_2;
-                fam.forEach((m, i) => m.setLatLng([pos[0], pos[1] + ((i - 3) * 360)]));
-            });
-            refresh();
+            
+            // Remove all markers from map
+            [...markers1, ...markers2].forEach(m => map.removeLayer(m));
+            markers1.length = 0;
+            markers2.length = 0;
+            
+            refresh(); // Will set distance to 0
             map.setView([20, 0], CONFIG.ZOOM);
         }
     </script>
