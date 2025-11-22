@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Compare the latitude of different cities on a global map.">
+    <title>Latitude Comparator</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    
+    <!-- Preconnect for Performance -->
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://basemaps.cartocdn.com">
+    <link rel="preconnect" href="https://nominatim.openstreetmap.org">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+     
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow: hidden; }
+        #map { height: 100vh; width: 100vw; z-index: 1; background-color: #111; }
+        
+        /* UI Components */
+        .glass-panel {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.8), 0 2px 4px -1px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        
+        /* Scrollbar */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #171717; border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #404040; border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #525252; }
+        
+        /* Loader */
+        .loader {
+            border: 2px solid #404040;
+            border-top: 2px solid #ffffff;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Leaflet Overrides */
+        .leaflet-bar a {
+            background-color: #0a0a0a !important;
+            color: #e5e5e5 !important;
+            border-bottom: 1px solid #262626 !important;
+        }
+        .leaflet-bar a:hover { background-color: #262626 !important; }
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background: #0a0a0a !important;
+            color: #f5f5f5 !important;
+            box-shadow: 0 3px 14px rgba(0,0,0,0.8) !important;
+            border: 1px solid #333 !important;
+        }
+        .leaflet-container .leaflet-control-attribution {
+            background: rgba(0, 0, 0, 0.6) !important;
+            color: #666 !important;
+            font-size: 11px;
+            border-radius: 4px 0 0 0;
+        }
+        .leaflet-container .leaflet-control-attribution a { color: #888 !important; text-decoration: none; }
+        .leaflet-container .leaflet-control-attribution a:hover { color: #ccc !important; text-decoration: underline; }
+        .custom-pin { background: transparent; border: none; }
+    </style>
+</head>
+<body class="bg-black">
+
+    <!-- Map Container -->
+    <div id="map"></div>
+
+    <!-- Floating Control Panel -->
+    <div class="absolute top-4 left-4 z-[1000] w-full max-w-sm px-2 pointer-events-none">
+        <div class="glass-panel rounded-xl p-4 pointer-events-auto shadow-2xl">
+            
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-4">
+                <h1 class="text-lg font-bold text-white flex items-center gap-2">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Latitude Comparator
+                </h1>
+                <button onclick="clearMap()" class="text-[10px] font-bold text-neutral-400 border border-neutral-600 hover:border-red-500 hover:text-red-500 hover:bg-red-900/20 px-3 py-1 rounded transition-all">
+                    Reset
+                </button>
+            </div>
+
+            <!-- Search Form -->
+            <form id="searchForm" onsubmit="handleSearch(event)" class="relative group">
+                <input type="text" id="searchInput" placeholder="Enter city" class="w-full pl-10 pr-4 py-2.5 bg-neutral-900/50 border border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-neutral-500 focus:border-neutral-500 transition-all text-sm text-white placeholder-neutral-500 focus:bg-neutral-900">
+                <svg class="w-4 h-4 text-neutral-500 absolute left-3.5 top-3.5 group-focus-within:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <button type="submit" id="searchBtn" class="absolute right-2 top-2 bg-white hover:bg-neutral-200 text-black text-xs font-bold px-3 py-1 rounded-md transition-colors flex items-center gap-2 shadow-lg shadow-black/20">Find</button>
+            </form>
+
+            <!-- Error Message -->
+            <div id="errorMessage" class="hidden mt-3 text-xs text-red-400 bg-red-950/30 p-2 rounded border border-red-900/50 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span id="errorText">Location not found.</span>
+            </div>
+
+            <!-- Current Location Info -->
+            <div id="locationInfo" class="hidden mt-4 pt-4 border-t border-white/10">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 id="cityName" class="text-sm font-bold text-white">City Name</h2>
+                        <p class="text-xs text-neutral-400 mt-0.5">Latitude: <span id="latValue" class="font-mono text-white font-medium">0.00</span></p>
+                    </div>
+                    <div class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full select-none">
+                        <span class="relative flex h-1.5 w-1.5">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                        </span>
+                        Active
+                    </div>
+                </div>
+            </div>
+
+            <!-- History/Instructions -->
+            <div class="mt-4">
+                <p id="instructions" class="text-xs text-neutral-500">Search for a location to draw a latitude line across the globe.</p>
+                <div id="historyContainer" class="hidden pt-4 border-t border-white/10">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-bold text-white">History</h3>
+                        <button onclick="toggleHistory()" id="historyToggleBtn" aria-label="Toggle history" class="text-neutral-400 border border-neutral-600 hover:border-neutral-400 hover:text-white p-1 rounded transition-all focus:outline-none flex items-center justify-center" title="Toggle History">
+                            <svg id="historyArrow" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                    </div>
+                    <ul id="historyList" class="hidden space-y-2 max-h-32 overflow-y-auto custom-scroll transition-all duration-200 mt-2"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const CONFIG = {
+            COORDS: [20, 0],
+            ZOOM: 2,
+            HISTORY_MAX: 10,
+            TILE_URL: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+        };
+
+        // --- State & Cache ---
+        let map, currentLayerGroup;
+        let history = [], isHistoryExpanded = false;
+        const els = {}; // DOM Elements Cache
+
+        const whiteIcon = L.divIcon({
+            className: 'custom-pin',
+            html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" class="w-8 h-8 drop-shadow-lg"><path fill-rule="evenodd" d="M11.54 22.351l.07.04.028.016a.76.76 0 00.723 0l.028-.015.071-.041a16.975 16.975 0 001.144-.742 19.58 19.58 0 002.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 00-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 002.682 2.282 16.975 16.975 0 001.145.742zM12 13.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z" clip-rule="evenodd" /></svg>`,
+            iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -34]
+        });
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Cache crucial elements
+            ['searchInput', 'searchBtn', 'errorMessage', 'errorText', 'locationInfo', 
+             'cityName', 'latValue', 'historyContainer', 'historyList', 'historyToggleBtn', 
+             'historyArrow', 'instructions'].forEach(id => els[id] = document.getElementById(id));
+            
+            initMap();
+            els.searchInput.focus();
+        });
+
+        function initMap() {
+            map = L.map('map', {
+                zoomControl: false, minZoom: 2, worldCopyJump: true,
+                maxBounds: [[-90, -Infinity], [90, Infinity]], maxBoundsViscosity: 1.0
+            }).setView(CONFIG.COORDS, CONFIG.ZOOM);
+
+            L.tileLayer(CONFIG.TILE_URL, {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd', maxZoom: 20
+            }).addTo(map);
+
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+            currentLayerGroup = L.layerGroup().addTo(map);
+        }
+
+        // --- Core Logic ---
+        async function handleSearch(e) {
+            e.preventDefault();
+            const query = els.searchInput.value.trim();
+            if (!query) return;
+
+            const originalBtnText = els.searchBtn.innerHTML;
+            els.searchBtn.innerHTML = '<div class="loader"></div>';
+            els.searchBtn.disabled = true;
+            els.errorMessage.classList.add('hidden');
+
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&accept-language=en`);
+                if (!res.ok) throw new Error('Network error');
+                const data = await res.json();
+
+                if (data.length > 0) {
+                    const { lat, lon, display_name } = data[0];
+                    const name = display_name.split(',')[0];
+                    const latVal = parseFloat(lat), lonVal = parseFloat(lon);
+
+                    updateMap(latVal, lonVal, name);
+                    addToHistory(name, latVal, lonVal);
+                    els.searchInput.value = '';
+                } else {
+                    showError('Location not found. Try a different city.');
+                }
+            } catch (err) {
+                console.error(err);
+                showError('Something went wrong. Please try again.');
+            } finally {
+                els.searchBtn.innerHTML = originalBtnText;
+                els.searchBtn.disabled = false;
+            }
+        }
+
+        function updateMap(lat, lon, name) {
+            currentLayerGroup.clearLayers();
+            // Draw line across world
+            L.polyline([[lat, -360], [lat, 360]], { color: '#ffffff', weight: 2, opacity: 0.9, dashArray: '5, 10' }).addTo(currentLayerGroup);
+            // Draw marker
+            L.marker([lat, lon], { icon: whiteIcon }).bindPopup(`<b>${name}</b><br>Lat: ${lat.toFixed(4)}`).openPopup().addTo(currentLayerGroup);
+
+            // Update UI
+            els.instructions.classList.add('hidden');
+            els.locationInfo.classList.remove('hidden');
+            els.cityName.textContent = name;
+            els.latValue.textContent = lat.toFixed(4) + '°';
+            
+            map.setView([lat, lon], Math.max(map.getZoom(), 3));
+        }
+
+        function addToHistory(name, lat, lon) {
+            history.unshift({ name, lat, lon });
+            if (history.length > CONFIG.HISTORY_MAX) history.pop();
+            renderHistory();
+        }
+
+        function removeHistoryItem(index, event) {
+            if (event) event.stopPropagation();
+            history.splice(index, 1);
+            renderHistory();
+        }
+
+        function toggleHistory() {
+            isHistoryExpanded = !isHistoryExpanded;
+            renderHistory();
+        }
+
+        function renderHistory() {
+            if (history.length === 0) {
+                els.historyContainer.classList.add('hidden');
+                return;
+            }
+            els.historyContainer.classList.remove('hidden');
+
+            if (isHistoryExpanded) {
+                els.historyList.classList.remove('hidden');
+                els.historyArrow.classList.add('rotate-180');
+            } else {
+                els.historyList.classList.add('hidden');
+                els.historyArrow.classList.remove('rotate-180');
+            }
+
+            els.historyList.innerHTML = history.map((item, index) => `
+                <li onclick="restoreHistoryItem(${index})" class="cursor-pointer flex justify-between items-center bg-neutral-900/80 p-1.5 rounded border border-neutral-800 shadow-sm hover:bg-neutral-800 hover:border-neutral-600 transition-all group relative">
+                    <div class="flex items-center min-w-0 gap-1.5">
+                        <span class="text-sm font-bold text-white truncate transition-colors" style="max-width: 140px;">${item.name}</span>
+                        <span class="text-xs text-neutral-400 font-mono group-hover:text-neutral-300 transition-colors whitespace-nowrap">${item.lat.toFixed(2)}°</span>
+                    </div>
+                    <button onclick="removeHistoryItem(${index}, event)" aria-label="Remove from history" class="text-neutral-600 hover:text-red-500 hover:bg-red-900/20 p-1 rounded transition-colors shrink-0 ml-1.5" title="Remove">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </li>
+            `).join('');
+        }
+
+        function restoreHistoryItem(index) {
+            const item = history[index];
+            if (item) updateMap(item.lat, item.lon, item.name);
+        }
+
+        function showError(msg) {
+            els.errorText.textContent = msg;
+            els.errorMessage.classList.remove('hidden');
+        }
+
+        function clearMap() {
+            currentLayerGroup.clearLayers();
+            els.locationInfo.classList.add('hidden');
+            els.instructions.classList.remove('hidden');
+            els.historyContainer.classList.add('hidden');
+            els.searchInput.value = '';
+            history = [];
+            map.setView(CONFIG.COORDS, CONFIG.ZOOM);
+        }
+    </script>
+</body>
+</html>
