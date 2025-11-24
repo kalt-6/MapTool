@@ -398,9 +398,10 @@
                     refresh();
                     
                     const isMobile = window.innerWidth < 1024;
+                    const zoomLevel = 10;
                     
                     if (markers1.length > 0 && markers2.length > 0) {
-                        // Two points: Use fitBounds to show the path
+                        // Two points: Use fitBounds
                         const bounds = L.latLngBounds(getPath(markers1[0].getLatLng(), markers2[0].getLatLng()));
                         if (bounds.isValid()) {
                             map.fitBounds(bounds, { 
@@ -411,30 +412,32 @@
                             });
                         }
                     } else {
-                        // FIXED: Single point logic
-                        // Instead of complex padding which can push the pin off-screen when keyboard is open,
-                        // we simply set the view to the target, then pan slightly to visual center.
-                        
-                        map.setView([nLat, nLon], 10, { animate: true, duration: 1.5 });
-                        
-                        // On mobile, the panel covers the bottom. 
-                        // We pan the map "down" (positive y) so the pin moves "up" relative to the viewport center.
-                        // We use a percentage of height to keep it safe.
+                        // FIXED: Precise Pin Placement for Mobile
+                        // Instead of padding or panning, we mathematically calculate the center 
+                        // needed to place the pin exactly at 25% from the top of the visible screen.
                         if (isMobile) {
-                            setTimeout(() => {
-                                // Pan by 15% of screen height. 
-                                // Positive Y moves the map canvas down (features move down). 
-                                // Wait... panning map down moves features down. 
-                                // We want the pin to be HIGHER (visually) to avoid the bottom panel.
-                                // So we need to pan the map UP (negative Y)?
-                                // Let's trace: Center is at 50%. Panel covers bottom. We want pin at 30%.
-                                // We need to move the pin UP by 20%.
-                                // Moving features UP means panning the map UP.
-                                // So we need a POSITIVE offset in setView? Or panBy?
-                                // map.panBy([0, 100]) moves the viewport 100px down relative to the map.
-                                // So the map moves UP relative to the viewport.
-                                map.panBy([0, window.innerHeight * 0.15], { animate: true });
-                            }, 250); // Small delay to let the zoom animation start first
+                            // 1. Convert target LatLng to world pixels at the desired zoom
+                            const targetPoint = map.project([nLat, nLon], zoomLevel);
+                            
+                            // 2. Get current viewport height (which is shrunk if keyboard is open)
+                            const mapSize = map.getSize();
+                            
+                            // 3. We want the target to be at 25% from the top (targetY)
+                            // The map center is always at 50% (mapSize.y / 2)
+                            // So we need to shift the center 'down' by the difference
+                            const targetY = mapSize.y * 0.25; 
+                            const offset = (mapSize.y / 2) - targetY;
+                            
+                            // 4. Calculate the new center point in world pixels (Y increases downwards)
+                            // We add the offset to the target Y to find the center Y
+                            const centerPoint = L.point(targetPoint.x, targetPoint.y + offset);
+                            
+                            // 5. Convert back to LatLng and set view
+                            const centerLatLng = map.unproject(centerPoint, zoomLevel);
+                            map.setView(centerLatLng, zoomLevel, { animate: true, duration: 1.2 });
+                        } else {
+                            // Desktop: Standard centering
+                            map.setView([nLat, nLon], zoomLevel, { animate: true, duration: 1.2 });
                         }
                     }
 
