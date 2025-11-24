@@ -63,6 +63,13 @@
         
         /* Mobile optimization for collapsed state */
         .rotate-180 { transform: rotate(180deg); }
+
+        /* NEW: Hide zoom controls on mobile devices to save space */
+        @media (max-width: 768px) {
+            .leaflet-control-zoom {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-black">
@@ -70,8 +77,8 @@
     <div id="map"></div>
 
     <!-- Responsive Container: Bottom on Mobile, Top Left on Desktop -->
-    <!-- FIXED: Added 'bottom-8' and 'md:bottom-auto' 'md:top-4' to move panel to bottom on mobile -->
-    <div class="absolute bottom-8 left-4 w-[calc(100%-2rem)] max-w-sm md:top-4 md:bottom-auto md:w-96 z-[1000] pointer-events-none transition-all duration-300">
+    <!-- FIXED: Changed bottom-8 to bottom-4 to sit lower on the screen -->
+    <div class="absolute bottom-4 left-4 w-[calc(100%-2rem)] max-w-sm md:top-4 md:bottom-auto md:w-96 z-[1000] pointer-events-none transition-all duration-300">
         <div class="glass-panel rounded-xl p-3 md:p-4 pointer-events-auto shadow-2xl overflow-hidden">
             
             <!-- Header Row -->
