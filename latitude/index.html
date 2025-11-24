@@ -86,7 +86,7 @@
     <div id="map"></div>
 
     <div class="panel-position">
-        <div class="glass-panel rounded-xl p-3 md:p-4 pointer-events-auto shadow-2xl overflow-hidden">
+        <div class="glass-panel rounded-xl px-3 pt-2 pb-2 md:px-4 md:pt-2 md:pb-2 pointer-events-auto shadow-2xl overflow-hidden">
             
             <!-- Header -->
             <div class="flex items-center justify-between mb-0">
@@ -101,46 +101,50 @@
                 </div>
                 
                 <div class="flex items-center gap-2">
-                    <button onclick="resetMap()" aria-label="Reset Map" class="text-[10px] font-bold text-neutral-400 border border-neutral-600 md:hover:border-red-500 md:hover:text-red-500 md:hover:bg-red-900/20 active:border-red-500 active:text-red-500 active:bg-red-900/20 px-2 py-1 rounded transition-all">
+                    <!-- Reset Button -->
+                    <button id="resetBtn" aria-label="Reset Map" class="h-[26px] px-3 flex items-center justify-center text-xs font-bold text-neutral-400 border border-neutral-600 md:hover:border-red-500 md:hover:text-red-500 md:hover:bg-red-900/20 active:border-red-500 active:text-red-500 active:bg-red-900/20 rounded-md transition-all">
                         Reset
                     </button>
-                    <button onclick="togglePanel()" id="toggleBtn" aria-label="Toggle Panel" class="p-1 text-neutral-400 md:hover:text-white md:hover:bg-neutral-700/50 active:text-white active:bg-neutral-700/50 rounded transition-all">
+                    <!-- Toggle Button -->
+                    <button id="toggleBtn" aria-label="Toggle Panel" class="p-1 text-neutral-400 md:hover:text-white md:hover:bg-neutral-700/50 active:text-white active:bg-neutral-700/50 rounded-md transition-all">
                         <svg id="chevronIcon" class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
                     </button>
                 </div>
             </div>
 
             <!-- Content -->
-            <div id="panelContent" class="transition-all duration-300 ease-in-out max-h-[60vh] md:max-h-[500px] overflow-y-auto opacity-100 mt-3 md:mt-4">
+            <div id="panelContent" class="transition-all duration-300 ease-in-out max-h-[60vh] md:max-h-[500px] overflow-hidden opacity-100 mt-2">
                 
                 <!-- Search Input -->
-                <div class="mb-4 relative group">
+                <div class="mb-2 relative group">
                     <div class="absolute left-3.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
-                    <input type="text" id="searchInput" aria-label="Search City" placeholder="Enter city (e.g. Paris)" class="w-full pl-8 pr-20 py-2.5 bg-neutral-900/50 border border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-base text-white placeholder-neutral-500 focus:bg-neutral-900">
-                    <button type="button" id="searchBtn" aria-label="Find Location" class="absolute right-2 top-1/2 -translate-y-1/2 bg-white hover:bg-neutral-200 text-black text-xs font-bold rounded-md transition-colors flex items-center justify-center shadow-lg shadow-black/20 w-[52px] h-[26px]">Find</button>
+                    <input type="text" id="searchInput" aria-label="Search City" placeholder="Enter city" class="w-full pl-8 pr-24 py-2.5 bg-neutral-900/50 border border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-base text-white placeholder-neutral-500 focus:bg-neutral-900">
+                    
+                    <!-- Find Button -->
+                    <button type="button" id="searchBtn" aria-label="Find Location" class="absolute right-2 top-1/2 -translate-y-1/2 bg-white hover:bg-neutral-200 text-black text-xs font-bold rounded-md transition-colors flex items-center justify-center shadow-lg shadow-black/20 h-[26px] px-3 min-w-[52px]">Find</button>
+                </div>
+
+                <!-- Error Message -->
+                <div id="errorMessage" role="alert" class="hidden mb-2 text-xs text-red-400 bg-red-950/30 p-2 rounded border border-red-900/50 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span id="errorText">Location not found.</span>
                 </div>
 
                 <!-- Result Info -->
-                <div id="resultPanel" class="pt-3 md:pt-4 border-t border-white/10" aria-live="polite">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-xs font-bold text-neutral-400 uppercase tracking-wide">Latitude</h2>
-                        <div class="flex items-center gap-2 text-sm font-bold text-white bg-neutral-800 border border-neutral-700 px-3 py-1.5 rounded-lg select-text font-mono">
+                <div id="resultPanel" class="pt-2 border-t border-white/10" aria-live="polite">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xs font-bold text-neutral-400 uppercase tracking-wide leading-none">Latitude</h2>
+                        <!-- Degrees Box -->
+                        <div class="h-[26px] px-3 min-w-[52px] flex items-center justify-center text-xs font-bold text-white bg-neutral-800 border border-neutral-700 rounded-md select-text font-mono whitespace-nowrap">
                             <span id="latText">0.00°</span>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Error -->
-                <div id="errorMessage" role="alert" class="hidden mt-3 text-xs text-red-400 bg-red-950/30 p-2 rounded border border-red-900/50 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <span id="errorText">Location not found.</span>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- Configuration ---
         const CONFIG = {
             ZOOM: 2,
             COORDS: [20, 0],
@@ -153,19 +157,18 @@
         const PIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36" fill="white" stroke="#111" stroke-width="1.5" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`;
         const PIN_ICON = L.divIcon({ className: '', html: PIN_SVG, iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36] });
 
-        // --- Global State ---
         let map, currentLayerGroup;
         const els = {};
         let errorTimeout, isPanelOpen = true;
+        let isSyncingPopups = false;
 
         document.addEventListener('DOMContentLoaded', () => {
-            ['searchInput', 'searchBtn', 'latText', 'errorMessage', 'errorText', 'panelContent', 'chevronIcon', 'headerLat'].forEach(id => els[id] = document.getElementById(id));
-            
+            ['searchInput', 'searchBtn', 'resetBtn', 'toggleBtn', 'latText', 'errorMessage', 'errorText', 'panelContent', 'chevronIcon', 'headerLat'].forEach(id => {
+                els[id] = document.getElementById(id);
+            });
             initMap();
             setupEvents();
             updateIconState();
-            
-            // Safe-guard against scroll on resize/keyboard
             window.addEventListener('resize', () => {
                 updateIconState();
                 if (window.scrollY > 0) window.scrollTo(0, 0);
@@ -174,8 +177,7 @@
 
         function initMap() {
             map = L.map('map', {
-                worldCopyJump: false, // Manual wrapping used instead
-                minZoom: 2, zoomControl: false,
+                worldCopyJump: false, minZoom: 2, zoomControl: false,
                 maxBounds: CONFIG.MAX_BOUNDS, maxBoundsViscosity: 1.0
             }).setView(CONFIG.COORDS, CONFIG.ZOOM);
 
@@ -184,19 +186,20 @@
             currentLayerGroup = L.layerGroup().addTo(map);
         }
 
-        // --- UI Logic ---
         function togglePanel() {
             isPanelOpen = !isPanelOpen;
             const mobile = window.innerWidth < 1024;
-            
             if (isPanelOpen) {
-                Object.assign(els.panelContent.style, { maxHeight: mobile ? '60vh' : '500px', opacity: '1', marginTop: mobile ? '0.75rem' : '1rem', marginBottom: '0' });
-                els.headerLat.classList.add('hidden');
+                // Use '0.5rem' to match the mt-2 class in HTML
+                Object.assign(els.panelContent.style, { maxHeight: mobile ? '60vh' : '500px', opacity: '1', marginTop: '0.5rem', marginBottom: '0' });
+                els.headerLat?.classList.add('hidden');
             } else {
                 Object.assign(els.panelContent.style, { maxHeight: '0', opacity: '0', marginTop: '0', marginBottom: '0' });
-                if (els.latText.textContent !== "0.00°") {
-                    els.headerLat.textContent = els.latText.textContent;
-                    els.headerLat.classList.remove('hidden');
+                if (els.latText?.textContent !== "0.00°") {
+                    if (els.headerLat) {
+                        els.headerLat.textContent = els.latText.textContent;
+                        els.headerLat.classList.remove('hidden');
+                    }
                 }
             }
             updateIconState();
@@ -204,23 +207,27 @@
 
         function updateIconState() {
             const isMobile = window.innerWidth < 1024;
-            els.chevronIcon.classList.toggle('rotate-180', isPanelOpen ? isMobile : !isMobile);
+            els.chevronIcon?.classList.toggle('rotate-180', isPanelOpen ? isMobile : !isMobile);
         }
 
         function setupEvents() {
-            els.searchBtn.addEventListener('click', handleSearch);
-            els.searchInput.addEventListener('keydown', (e) => e.key === 'Enter' && handleSearch());
+            els.searchBtn?.addEventListener('click', handleSearch);
+            els.searchInput?.addEventListener('keydown', (e) => e.key === 'Enter' && handleSearch());
+            els.resetBtn?.addEventListener('click', resetMap);
+            els.toggleBtn?.addEventListener('click', togglePanel);
         }
 
-        // --- Application Logic ---
         async function handleSearch() {
-            const q = els.searchInput.value.trim();
+            const q = els.searchInput?.value.trim();
             if (!q) return;
 
-            const originalText = els.searchBtn.innerText;
-            els.searchBtn.innerHTML = '<div class="loader"></div>';
-            els.searchBtn.disabled = true;
-            els.errorMessage.classList.add('hidden');
+            const originalText = els.searchBtn?.innerText;
+            if (els.searchBtn) {
+                els.searchBtn.innerHTML = '<div class="loader"></div>';
+                els.searchBtn.disabled = true;
+            }
+            
+            els.errorMessage?.classList.add('hidden');
 
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`);
@@ -229,54 +236,83 @@
                 if (data?.[0]) {
                     const { lat, lon, display_name } = data[0];
                     const nLat = parseFloat(lat), nLon = parseFloat(lon);
+                    const name = display_name.split(',')[0];
+
+                    updateMap(nLat, nLon, name);
                     
-                    updateMap(nLat, nLon, display_name.split(',')[0]);
-                    els.searchInput.value = display_name.split(',')[0];
+                    if (els.searchInput) els.searchInput.value = name;
                 } else {
                     showError('Location not found.');
                 }
             } catch (e) { showError('Search failed.'); } 
-            finally { els.searchBtn.innerText = originalText; els.searchBtn.disabled = false; }
+            finally { 
+                if (els.searchBtn) {
+                    els.searchBtn.innerText = originalText; 
+                    els.searchBtn.disabled = false; 
+                }
+            }
         }
 
         function updateMap(lat, lon, name) {
+            if (!currentLayerGroup) return;
             currentLayerGroup.clearLayers();
             
-            // Infinite Latitude Lines & Markers
             const linePoints = [];
+            const markers = [];
+
             for (let i = -CONFIG.WORLD_COPIES; i <= CONFIG.WORLD_COPIES; i++) {
                 const offset = i * 360;
-                // Line segment for this world copy
                 linePoints.push([[lat, -180 + offset], [lat, 180 + offset]]);
                 
-                // Marker for this world copy
                 const marker = L.marker([lat, lon + offset], { icon: PIN_ICON })
-                    .bindPopup(`<b>${name}</b><br>Lat: ${lat.toFixed(4)}`)
+                    .bindPopup(`<b>${name}</b><br>Lat: ${lat.toFixed(4)}`, { 
+                        autoClose: false, 
+                        closeOnClick: false,
+                        autoPan: false 
+                    })
                     .addTo(currentLayerGroup);
                 
-                if (i === 0) marker.openPopup();
+                markers.push(marker);
             }
+
+            markers.forEach(m => {
+                m.on('popupclose', () => {
+                    if (isSyncingPopups) return;
+                    isSyncingPopups = true;
+                    markers.forEach(other => other.closePopup());
+                    isSyncingPopups = false;
+                });
+                
+                m.on('click', () => {
+                    if (isSyncingPopups) return;
+                    isSyncingPopups = true;
+                    markers.forEach(other => other.openPopup());
+                    isSyncingPopups = false;
+                });
+
+                m.openPopup();
+            });
             
             L.polyline(linePoints, { color: CONFIG.LAT_COLOR, weight: 2, opacity: 0.8, dashArray: '5, 10' }).addTo(currentLayerGroup);
 
-            els.latText.textContent = lat.toFixed(4) + '°';
+            if (els.latText) els.latText.textContent = lat.toFixed(4) + '°';
             map.setView([lat, lon], 5, { animate: true });
         }
 
         function showError(msg) {
             if (errorTimeout) clearTimeout(errorTimeout);
-            els.errorText.textContent = msg;
-            els.errorMessage.classList.remove('hidden');
-            errorTimeout = setTimeout(() => els.errorMessage.classList.add('hidden'), 3000);
+            if (els.errorText) els.errorText.textContent = msg;
+            els.errorMessage?.classList.remove('hidden');
+            errorTimeout = setTimeout(() => els.errorMessage?.classList.add('hidden'), 3000);
         }
 
         function resetMap() {
             if (errorTimeout) clearTimeout(errorTimeout);
-            els.errorMessage.classList.add('hidden');
-            els.searchInput.value = '';
+            els.errorMessage?.classList.add('hidden');
+            if (els.searchInput) els.searchInput.value = '';
             
-            currentLayerGroup.clearLayers();
-            els.latText.textContent = "0.00°";
+            if (currentLayerGroup) currentLayerGroup.clearLayers();
+            if (els.latText) els.latText.textContent = "0.00°";
             
             map.setView(CONFIG.COORDS, CONFIG.ZOOM);
             if (!isPanelOpen) togglePanel();
