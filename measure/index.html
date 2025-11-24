@@ -380,9 +380,6 @@
             btn.disabled = true;
             els.errorMessage.classList.add('hidden');
 
-            // FIXED: Force reset scroll to prevent coordinate offsets
-            window.scrollTo(0, 0);
-
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`);
                 const data = await res.json();
@@ -400,37 +397,20 @@
                     inp.value = display_name.split(',')[0];
                     refresh();
                     
-                    // FIXED: Tell map to update its size knowledge immediately (in case keyboard just resized it)
-                    map.invalidateSize();
-
-                    // FIXED: Safe Padding Logic
-                    // We simply tell Leaflet: "The bottom part of the screen is covered."
-                    // Leaflet will then center the content in the REMAINING top space.
-                    // We CAP the padding at 40% of height to strictly prevent the pin from being pushed off-screen.
-                    const panel = document.querySelector('.glass-panel');
-                    const panelHeight = panel ? panel.offsetHeight : 0;
-                    const isMobile = window.innerWidth < 1024;
-                    
-                    // Use panel height + buffer, but NEVER more than 40% of the screen height
-                    const bottomPadding = isMobile ? Math.min(panelHeight + 20, window.innerHeight * 0.4) : 50;
-
-                    const fitOptions = {
-                        paddingTopLeft: [20, 20],
-                        paddingBottomRight: [20, bottomPadding],
-                        animate: true,
-                        duration: 1.0,
-                        maxZoom: 12 // Good close-up zoom for single points
-                    };
-
+                    // Reverted to standard view logic without mobile offsets
                     if (markers1.length > 0 && markers2.length > 0) {
                         const bounds = L.latLngBounds(getPath(markers1[0].getLatLng(), markers2[0].getLatLng()));
                         if (bounds.isValid()) {
-                            map.fitBounds(bounds, { ...fitOptions, maxZoom: 6 });
+                            map.fitBounds(bounds, { 
+                                padding: [50, 50], 
+                                maxZoom: 6, 
+                                animate: true, 
+                                duration: 1.5 
+                            });
                         }
                     } else {
-                        // Treat single point as a tiny bound to use the same padding logic
-                        const b = L.latLngBounds([nLat, nLon], [nLat, nLon]);
-                        map.fitBounds(b, fitOptions);
+                        // Standard view for single point
+                        map.setView([nLat, nLon], 5);
                     }
 
                 } else {
