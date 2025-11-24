@@ -380,6 +380,9 @@
             btn.disabled = true;
             els.errorMessage.classList.add('hidden');
 
+            // FIXED: Force reset scroll to prevent coordinate offsets
+            window.scrollTo(0, 0);
+
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`);
                 const data = await res.json();
@@ -397,48 +400,37 @@
                     inp.value = display_name.split(',')[0];
                     refresh();
                     
+                    // FIXED: Tell map to update its size knowledge immediately (in case keyboard just resized it)
+                    map.invalidateSize();
+
+                    // FIXED: Safe Padding Logic
+                    // We simply tell Leaflet: "The bottom part of the screen is covered."
+                    // Leaflet will then center the content in the REMAINING top space.
+                    // We CAP the padding at 40% of height to strictly prevent the pin from being pushed off-screen.
+                    const panel = document.querySelector('.glass-panel');
+                    const panelHeight = panel ? panel.offsetHeight : 0;
                     const isMobile = window.innerWidth < 1024;
-                    const zoomLevel = 10;
                     
+                    // Use panel height + buffer, but NEVER more than 40% of the screen height
+                    const bottomPadding = isMobile ? Math.min(panelHeight + 20, window.innerHeight * 0.4) : 50;
+
+                    const fitOptions = {
+                        paddingTopLeft: [20, 20],
+                        paddingBottomRight: [20, bottomPadding],
+                        animate: true,
+                        duration: 1.0,
+                        maxZoom: 12 // Good close-up zoom for single points
+                    };
+
                     if (markers1.length > 0 && markers2.length > 0) {
-                        // Two points: Use fitBounds
                         const bounds = L.latLngBounds(getPath(markers1[0].getLatLng(), markers2[0].getLatLng()));
                         if (bounds.isValid()) {
-                            map.fitBounds(bounds, { 
-                                padding: isMobile ? [30, 30] : [50, 50], 
-                                maxZoom: 6, 
-                                animate: true, 
-                                duration: 1.5 
-                            });
+                            map.fitBounds(bounds, { ...fitOptions, maxZoom: 6 });
                         }
                     } else {
-                        // FIXED: Precise Pin Placement for Mobile
-                        // Instead of padding or panning, we mathematically calculate the center 
-                        // needed to place the pin exactly at 25% from the top of the visible screen.
-                        if (isMobile) {
-                            // 1. Convert target LatLng to world pixels at the desired zoom
-                            const targetPoint = map.project([nLat, nLon], zoomLevel);
-                            
-                            // 2. Get current viewport height (which is shrunk if keyboard is open)
-                            const mapSize = map.getSize();
-                            
-                            // 3. We want the target to be at 25% from the top (targetY)
-                            // The map center is always at 50% (mapSize.y / 2)
-                            // So we need to shift the center 'down' by the difference
-                            const targetY = mapSize.y * 0.25; 
-                            const offset = (mapSize.y / 2) - targetY;
-                            
-                            // 4. Calculate the new center point in world pixels (Y increases downwards)
-                            // We add the offset to the target Y to find the center Y
-                            const centerPoint = L.point(targetPoint.x, targetPoint.y + offset);
-                            
-                            // 5. Convert back to LatLng and set view
-                            const centerLatLng = map.unproject(centerPoint, zoomLevel);
-                            map.setView(centerLatLng, zoomLevel, { animate: true, duration: 1.2 });
-                        } else {
-                            // Desktop: Standard centering
-                            map.setView([nLat, nLon], zoomLevel, { animate: true, duration: 1.2 });
-                        }
+                        // Treat single point as a tiny bound to use the same padding logic
+                        const b = L.latLngBounds([nLat, nLon], [nLat, nLon]);
+                        map.fitBounds(b, fitOptions);
                     }
 
                 } else {
