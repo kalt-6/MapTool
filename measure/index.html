@@ -397,32 +397,45 @@
                     inp.value = display_name.split(',')[0];
                     refresh();
                     
-                    // FIXED: More conservative padding calculation
-                    // Cap the padding to 35% of the viewport height to prevent the map from zooming out too much
-                    // or pushing the pin off the top of the screen on small devices.
                     const isMobile = window.innerWidth < 1024;
-                    const panel = document.querySelector('.glass-panel');
-                    const maxPadding = window.innerHeight * 0.35; 
-                    const panelHeight = panel ? panel.offsetHeight : 0;
-                    const bottomPadding = isMobile ? Math.min(panelHeight, maxPadding) : 50;
                     
-                    const fitOptions = {
-                        paddingTopLeft: [20, 20], // Reduced from 50 to 20 for more space
-                        paddingBottomRight: [20, bottomPadding],
-                        animate: true,
-                        duration: 1.5,
-                        maxZoom: 10 // Increased maxZoom to ensure single points are visible clearly
-                    };
-
                     if (markers1.length > 0 && markers2.length > 0) {
+                        // Two points: Use fitBounds to show the path
                         const bounds = L.latLngBounds(getPath(markers1[0].getLatLng(), markers2[0].getLatLng()));
                         if (bounds.isValid()) {
-                            map.fitBounds(bounds, { ...fitOptions, maxZoom: 6 });
+                            map.fitBounds(bounds, { 
+                                padding: isMobile ? [30, 30] : [50, 50], 
+                                maxZoom: 6, 
+                                animate: true, 
+                                duration: 1.5 
+                            });
                         }
                     } else {
-                        // For single point, use the increased maxZoom (10)
-                        const b = L.latLngBounds([nLat, nLon], [nLat, nLon]);
-                        map.fitBounds(b, fitOptions);
+                        // FIXED: Single point logic
+                        // Instead of complex padding which can push the pin off-screen when keyboard is open,
+                        // we simply set the view to the target, then pan slightly to visual center.
+                        
+                        map.setView([nLat, nLon], 10, { animate: true, duration: 1.5 });
+                        
+                        // On mobile, the panel covers the bottom. 
+                        // We pan the map "down" (positive y) so the pin moves "up" relative to the viewport center.
+                        // We use a percentage of height to keep it safe.
+                        if (isMobile) {
+                            setTimeout(() => {
+                                // Pan by 15% of screen height. 
+                                // Positive Y moves the map canvas down (features move down). 
+                                // Wait... panning map down moves features down. 
+                                // We want the pin to be HIGHER (visually) to avoid the bottom panel.
+                                // So we need to pan the map UP (negative Y)?
+                                // Let's trace: Center is at 50%. Panel covers bottom. We want pin at 30%.
+                                // We need to move the pin UP by 20%.
+                                // Moving features UP means panning the map UP.
+                                // So we need a POSITIVE offset in setView? Or panBy?
+                                // map.panBy([0, 100]) moves the viewport 100px down relative to the map.
+                                // So the map moves UP relative to the viewport.
+                                map.panBy([0, window.innerHeight * 0.15], { animate: true });
+                            }, 250); // Small delay to let the zoom animation start first
+                        }
                     }
 
                 } else {
