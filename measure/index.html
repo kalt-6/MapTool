@@ -69,8 +69,9 @@
 
     <div id="map"></div>
 
-    <!-- Responsive Container: Fixed width on mobile (max-w-sm) instead of stretching -->
-    <div class="absolute top-4 left-4 w-[calc(100%-2rem)] max-w-sm md:w-96 z-[1000] pointer-events-none transition-all duration-300">
+    <!-- Responsive Container: Bottom on Mobile, Top Left on Desktop -->
+    <!-- FIXED: Added 'bottom-8' and 'md:bottom-auto' 'md:top-4' to move panel to bottom on mobile -->
+    <div class="absolute bottom-8 left-4 w-[calc(100%-2rem)] max-w-sm md:top-4 md:bottom-auto md:w-96 z-[1000] pointer-events-none transition-all duration-300">
         <div class="glass-panel rounded-xl p-3 md:p-4 pointer-events-auto shadow-2xl overflow-hidden">
             
             <!-- Header Row -->
@@ -99,7 +100,8 @@
             </div>
 
             <!-- Collapsible Content -->
-            <div id="panelContent" class="transition-all duration-300 ease-in-out max-h-[500px] opacity-100 mt-3 md:mt-4">
+            <!-- FIXED: Added max-h-[60vh] for mobile safety, overflow-y-auto for scrolling on small screens -->
+            <div id="panelContent" class="transition-all duration-300 ease-in-out max-h-[60vh] md:max-h-[500px] overflow-y-auto opacity-100 mt-3 md:mt-4">
                 
                 <!-- Input 1 (Blue) -->
                 <div class="mb-3 relative group">
@@ -159,6 +161,9 @@
             ['input1', 'btn1', 'input2', 'btn2', 'distanceText', 'errorMessage', 'errorText', 'panelContent', 'chevronIcon', 'headerDistance'].forEach(id => els[id] = document.getElementById(id));
             initMap();
             setupEvents();
+            // Initial UI state update
+            updateIconState();
+            window.addEventListener('resize', updateIconState);
         });
 
         function initMap() {
@@ -182,27 +187,44 @@
         // --- UI Logic ---
         function togglePanel() {
             isPanelOpen = !isPanelOpen;
+            
             if (isPanelOpen) {
                 // Open
-                els.panelContent.style.maxHeight = '500px';
+                els.panelContent.style.maxHeight = window.innerWidth < 768 ? '60vh' : '500px';
                 els.panelContent.style.opacity = '1';
-                els.panelContent.style.marginTop = window.innerWidth < 768 ? '0.75rem' : '1rem'; // mt-3 or mt-4
+                els.panelContent.style.marginTop = window.innerWidth < 768 ? '0.75rem' : '1rem'; 
                 els.panelContent.style.marginBottom = '0';
-                els.chevronIcon.classList.remove('rotate-180');
-                els.headerDistance.classList.add('hidden'); // Hide mini distance
+                els.headerDistance.classList.add('hidden'); 
             } else {
                 // Close
                 els.panelContent.style.maxHeight = '0';
                 els.panelContent.style.opacity = '0';
                 els.panelContent.style.marginTop = '0';
                 els.panelContent.style.marginBottom = '0';
-                els.chevronIcon.classList.add('rotate-180');
                 
                 // Show mini distance in header if valid
                 if (els.distanceText.textContent !== "0 miles") {
                     els.headerDistance.textContent = els.distanceText.textContent;
                     els.headerDistance.classList.remove('hidden');
                 }
+            }
+            updateIconState();
+        }
+
+        // Updates arrow direction based on Mobile (Bottom) vs Desktop (Top)
+        function updateIconState() {
+            const isMobile = window.innerWidth < 768;
+            
+            // Logic:
+            // Desktop (Top): Open = Up Arrow (Normal), Closed = Down Arrow (180)
+            // Mobile (Bottom): Open = Down Arrow (180), Closed = Up Arrow (Normal)
+            
+            if (isPanelOpen) {
+                if (isMobile) els.chevronIcon.classList.add('rotate-180');
+                else els.chevronIcon.classList.remove('rotate-180');
+            } else {
+                if (isMobile) els.chevronIcon.classList.remove('rotate-180');
+                else els.chevronIcon.classList.add('rotate-180');
             }
         }
 
@@ -337,13 +359,6 @@
                         if (bounds.isValid()) {
                             map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6, animate: true, duration: 1.5 });
                         }
-                        
-                        // Auto-collapse on mobile after a successful full search (optional UX enhancement)
-                        if (window.innerWidth < 768) {
-                           // Uncomment next line if you want it to auto-close
-                           // togglePanel(); 
-                        }
-                        
                     } else {
                         map.setView([nLat, nLon], 5);
                     }
