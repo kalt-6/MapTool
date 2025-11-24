@@ -82,8 +82,8 @@
                     <!-- Title restored to 'Distance Calculator' -->
                     <div class="flex flex-col">
                         <h1 class="text-sm md:text-base font-bold text-white truncate leading-tight">Distance Calculator</h1>
-                        <!-- Mini result shown when collapsed -->
-                        <span id="headerDistance" class="text-[10px] text-blue-400 font-mono hidden">0 mi</span>
+                        <!-- FIXED: Increased text size for desktop readability (md:text-sm) -->
+                        <span id="headerDistance" class="text-xs md:text-sm font-bold text-blue-400 font-mono hidden">0 mi</span>
                     </div>
                 </div>
                 
@@ -104,7 +104,8 @@
                 <!-- Input 1 (Blue) -->
                 <div class="mb-3 relative group">
                     <div class="absolute left-3.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>
-                    <input type="text" id="input1" aria-label="Location A" placeholder="Point A (e.g., New York)" class="w-full pl-8 pr-16 py-2 bg-neutral-900/50 border border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm text-white placeholder-neutral-500 focus:bg-neutral-900">
+                    <!-- FIXED: Changed text-sm to text-base to prevent mobile auto-zoom -->
+                    <input type="text" id="input1" aria-label="Location A" placeholder="Point A (e.g., New York)" class="w-full pl-8 pr-16 py-2 bg-neutral-900/50 border border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-base text-white placeholder-neutral-500 focus:bg-neutral-900">
                     <button id="btn1" aria-label="Find Location A" class="absolute right-1.5 top-1.5 bg-white hover:bg-neutral-200 text-black text-[10px] font-bold px-2 py-1.5 rounded transition-colors shadow-lg shadow-black/20">
                         Find
                     </button>
@@ -113,7 +114,8 @@
                 <!-- Input 2 (Red) -->
                 <div class="mb-4 relative group">
                     <div class="absolute left-3.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>
-                    <input type="text" id="input2" aria-label="Location B" placeholder="Point B (e.g., London)" class="w-full pl-8 pr-16 py-2 bg-neutral-900/50 border border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all text-sm text-white placeholder-neutral-500 focus:bg-neutral-900">
+                    <!-- FIXED: Changed text-sm to text-base to prevent mobile auto-zoom -->
+                    <input type="text" id="input2" aria-label="Location B" placeholder="Point B (e.g., London)" class="w-full pl-8 pr-16 py-2 bg-neutral-900/50 border border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all text-base text-white placeholder-neutral-500 focus:bg-neutral-900">
                     <button id="btn2" aria-label="Find Location B" class="absolute right-1.5 top-1.5 bg-white hover:bg-neutral-200 text-black text-[10px] font-bold px-2 py-1.5 rounded transition-colors shadow-lg shadow-black/20">
                         Find
                     </button>
