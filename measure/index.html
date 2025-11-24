@@ -397,18 +397,21 @@
                     inp.value = display_name.split(',')[0];
                     refresh();
                     
-                    // FIXED: Dynamic padding calculation
-                    // This ensures the pin centers in the VISIBLE area above the panel/keyboard
+                    // FIXED: More conservative padding calculation
+                    // Cap the padding to 35% of the viewport height to prevent the map from zooming out too much
+                    // or pushing the pin off the top of the screen on small devices.
                     const isMobile = window.innerWidth < 1024;
                     const panel = document.querySelector('.glass-panel');
-                    // Add buffer (offsetHeight + 30px) to bottom padding on mobile so pin isn't covered
-                    const bottomPadding = isMobile && panel ? panel.offsetHeight + 30 : 50;
+                    const maxPadding = window.innerHeight * 0.35; 
+                    const panelHeight = panel ? panel.offsetHeight : 0;
+                    const bottomPadding = isMobile ? Math.min(panelHeight, maxPadding) : 50;
                     
                     const fitOptions = {
-                        paddingTopLeft: [50, 50],
-                        paddingBottomRight: [50, bottomPadding],
+                        paddingTopLeft: [20, 20], // Reduced from 50 to 20 for more space
+                        paddingBottomRight: [20, bottomPadding],
                         animate: true,
-                        duration: 1.5
+                        duration: 1.5,
+                        maxZoom: 10 // Increased maxZoom to ensure single points are visible clearly
                     };
 
                     if (markers1.length > 0 && markers2.length > 0) {
@@ -417,10 +420,9 @@
                             map.fitBounds(bounds, { ...fitOptions, maxZoom: 6 });
                         }
                     } else {
-                        // FIXED: Use fitBounds for single point too, to utilize the padding options
-                        // This fixes the "hidden behind panel" issue when keyboard is up
+                        // For single point, use the increased maxZoom (10)
                         const b = L.latLngBounds([nLat, nLon], [nLat, nLon]);
-                        map.fitBounds(b, { ...fitOptions, maxZoom: 5 });
+                        map.fitBounds(b, fitOptions);
                     }
 
                 } else {
