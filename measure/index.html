@@ -397,13 +397,30 @@
                     inp.value = display_name.split(',')[0];
                     refresh();
                     
+                    // FIXED: Dynamic padding calculation
+                    // This ensures the pin centers in the VISIBLE area above the panel/keyboard
+                    const isMobile = window.innerWidth < 1024;
+                    const panel = document.querySelector('.glass-panel');
+                    // Add buffer (offsetHeight + 30px) to bottom padding on mobile so pin isn't covered
+                    const bottomPadding = isMobile && panel ? panel.offsetHeight + 30 : 50;
+                    
+                    const fitOptions = {
+                        paddingTopLeft: [50, 50],
+                        paddingBottomRight: [50, bottomPadding],
+                        animate: true,
+                        duration: 1.5
+                    };
+
                     if (markers1.length > 0 && markers2.length > 0) {
                         const bounds = L.latLngBounds(getPath(markers1[0].getLatLng(), markers2[0].getLatLng()));
                         if (bounds.isValid()) {
-                            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6, animate: true, duration: 1.5 });
+                            map.fitBounds(bounds, { ...fitOptions, maxZoom: 6 });
                         }
                     } else {
-                        map.setView([nLat, nLon], 5);
+                        // FIXED: Use fitBounds for single point too, to utilize the padding options
+                        // This fixes the "hidden behind panel" issue when keyboard is up
+                        const b = L.latLngBounds([nLat, nLon], [nLat, nLon]);
+                        map.fitBounds(b, { ...fitOptions, maxZoom: 5 });
                     }
 
                 } else {
