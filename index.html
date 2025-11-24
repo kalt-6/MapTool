@@ -3,378 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Calculate the distance between two points on a global map.">
-    <title>Distance Calculator</title>
-    
-    <link rel="icon" type="image/png" href="logo.png">
+    <meta name="description" content="MapTool Suite: Distance Calculator and Latitude Comparator.">
+    <title>MapTool - Geospatial Utilities</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
 
-    <!-- Performance Preconnects -->
-    <link rel="preconnect" href="https://cdn.tailwindcss.com">
-    <link rel="preconnect" href="https://unpkg.com">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://basemaps.cartocdn.com">
-    <link rel="preconnect" href="https://nominatim.openstreetmap.org">
-
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-     crossorigin=""/>
-     
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-     crossorigin=""></script>
-
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
     <style>
-        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow: hidden; }
-        #map { height: 100vh; width: 100vw; z-index: 1; background-color: #111; }
-        
-        /* UI Components */
-        .glass-panel {
-            background: rgba(0, 0, 0, 0.85);
+        body { font-family: 'Inter', sans-serif; background-color: #0a0a0a; }
+        .glass-card {
+            background: rgba(20, 20, 20, 0.6);
             backdrop-filter: blur(12px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.8), 0 2px 4px -1px rgba(0, 0, 0, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             transition: all 0.3s ease;
         }
-        
-        /* Leaflet Overrides */
-        .leaflet-bar a { background-color: #0a0a0a !important; color: #e5e5e5 !important; border-bottom: 1px solid #262626 !important; }
-        .leaflet-bar a:hover { background-color: #262626 !important; }
-        .leaflet-container .leaflet-control-attribution {
-            background: rgba(0, 0, 0, 0.6) !important; color: #666 !important; font-size: 11px; border-radius: 4px 0 0 0;
+        .glass-card:hover {
+            background: rgba(30, 30, 30, 0.8);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
         }
-        .leaflet-container .leaflet-control-attribution a { color: #888 !important; text-decoration: none; }
-        .leaflet-container .leaflet-control-attribution a:hover { color: #ccc !important; text-decoration: underline; }
-        
-        /* Loaders */
-        .loader {
-            border: 2px solid #e5e5e5; border-top: 2px solid #3b82f6; border-radius: 50%;
-            width: 12px; height: 12px; animation: spin 1s linear infinite;
-        }
-        .loader-red { border-top-color: #ef4444; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        /* Mobile optimization for collapsed state */
-        .rotate-180 { transform: rotate(180deg); }
     </style>
 </head>
-<body class="bg-black">
+<body class="h-screen w-full flex flex-col items-center justify-center relative overflow-hidden">
 
-    <div id="map"></div>
+    <!-- Background Decoration -->
+    <div class="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] bg-red-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
-    <!-- Responsive Container: centered/full width on mobile, fixed width on desktop -->
-    <div class="absolute top-4 left-4 right-4 md:right-auto md:w-96 z-[1000] pointer-events-none transition-all duration-300">
-        <div class="glass-panel rounded-xl p-3 md:p-4 pointer-events-auto shadow-2xl overflow-hidden">
-            
-            <!-- Header Row -->
-            <div class="flex items-center justify-between mb-0">
-                <div class="flex items-center gap-2 overflow-hidden">
-                    <div class="p-1.5 bg-neutral-800 rounded-lg shrink-0">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
-                    </div>
-                    <!-- Title hides on very small screens if needed, or stays visible. Added 'truncate' for safety. -->
-                    <div class="flex flex-col">
-                        <h1 class="text-sm md:text-base font-bold text-white truncate leading-tight">Distance Calc</h1>
-                        <!-- Mini result shown when collapsed -->
-                        <span id="headerDistance" class="text-[10px] text-blue-400 font-mono hidden">0 mi</span>
-                    </div>
-                </div>
-                
-                <div class="flex items-center gap-2">
-                    <button onclick="resetMap()" aria-label="Reset Map" class="text-[10px] font-bold text-neutral-400 border border-neutral-600 hover:border-red-500 hover:text-red-500 hover:bg-red-900/20 px-2 py-1 rounded transition-all">
-                        Reset
-                    </button>
-                    <!-- Toggle Button -->
-                    <button onclick="togglePanel()" id="toggleBtn" aria-label="Toggle Panel" class="p-1 text-neutral-400 hover:text-white hover:bg-neutral-700/50 rounded transition-all">
-                        <svg id="chevronIcon" class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Collapsible Content -->
-            <div id="panelContent" class="transition-all duration-300 ease-in-out max-h-[500px] opacity-100 mt-3 md:mt-4">
-                
-                <!-- Input 1 (Blue) -->
-                <div class="mb-3 relative group">
-                    <div class="absolute left-3.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>
-                    <input type="text" id="input1" aria-label="Location A" placeholder="Point A (e.g., New York)" class="w-full pl-8 pr-16 py-2 bg-neutral-900/50 border border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm text-white placeholder-neutral-500 focus:bg-neutral-900">
-                    <button id="btn1" aria-label="Find Location A" class="absolute right-1.5 top-1.5 bg-white hover:bg-neutral-200 text-black text-[10px] font-bold px-2 py-1.5 rounded transition-colors shadow-lg shadow-black/20">
-                        Find
-                    </button>
-                </div>
-
-                <!-- Input 2 (Red) -->
-                <div class="mb-4 relative group">
-                    <div class="absolute left-3.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>
-                    <input type="text" id="input2" aria-label="Location B" placeholder="Point B (e.g., London)" class="w-full pl-8 pr-16 py-2 bg-neutral-900/50 border border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all text-sm text-white placeholder-neutral-500 focus:bg-neutral-900">
-                    <button id="btn2" aria-label="Find Location B" class="absolute right-1.5 top-1.5 bg-white hover:bg-neutral-200 text-black text-[10px] font-bold px-2 py-1.5 rounded transition-colors shadow-lg shadow-black/20">
-                        Find
-                    </button>
-                </div>
-
-                <!-- Results Info -->
-                <div id="resultPanel" class="pt-3 md:pt-4 border-t border-white/10" aria-live="polite">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-xs font-bold text-neutral-400 uppercase tracking-wide">Distance</h2>
-                        <div class="flex items-center gap-2 text-sm font-bold text-white bg-neutral-800 border border-neutral-700 px-3 py-1.5 rounded-lg select-none font-mono">
-                            <span id="distanceText">0 miles</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Error Toast -->
-                <div id="errorMessage" role="alert" class="hidden mt-3 text-xs text-red-400 bg-red-950/30 p-2 rounded border border-red-900/50 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <span id="errorText">Location not found.</span>
-                </div>
-            </div>
-            
+    <!-- Main Content -->
+    <div class="z-10 max-w-4xl w-full px-6">
+        
+        <div class="text-center mb-12">
+            <h1 class="text-5xl font-extrabold text-white tracking-tight mb-4">MapTool</h1>
+            <p class="text-neutral-400 text-lg max-w-xl mx-auto">A suite of precision geospatial utilities for measurement and comparison.</p>
         </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Measure Card -->
+            <a href="/measure/" class="glass-card p-8 rounded-2xl group block">
+                <div class="flex justify-between items-start mb-6">
+                    <div class="p-3 rounded-lg bg-blue-500/10 text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                        <!-- Ruler/Path Icon -->
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                    </div>
+                    <span class="text-neutral-500 group-hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                    </span>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-2">Measure</h2>
+                <p class="text-neutral-400 text-sm leading-relaxed">Calculate precise distances between any two points on the globe using Great Circle paths.</p>
+            </a>
+
+            <!-- Latitude Card -->
+            <a href="/latitude/" class="glass-card p-8 rounded-2xl group block">
+                <div class="flex justify-between items-start mb-6">
+                    <div class="p-3 rounded-lg bg-red-500/10 text-red-400 group-hover:bg-red-500 group-hover:text-white transition-colors">
+                        <!-- Globe/Latitude Icon -->
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                    </div>
+                    <span class="text-neutral-500 group-hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                    </span>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-2">Latitude</h2>
+                <p class="text-neutral-400 text-sm leading-relaxed">Compare cities across the world by visualizing their shared latitude lines.</p>
+            </a>
+
+        </div>
+
+        <footer class="mt-16 text-center text-neutral-600 text-xs">
+            &copy; <script>document.write(new Date().getFullYear())</script> MapTool.net
+        </footer>
     </div>
 
-    <script>
-        const CONFIG = {
-            ZOOM: 2,
-            TILE: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-            R_MI: 3958.8, R_KM: 6371,
-            TO_RAD: Math.PI / 180, TO_DEG: 180 / Math.PI
-        };
-
-        let map, allPolylines;
-        let markers1 = [], markers2 = [];
-        const els = {};
-        let errorTimeout;
-        let isPanelOpen = true;
-
-        document.addEventListener('DOMContentLoaded', () => {
-            ['input1', 'btn1', 'input2', 'btn2', 'distanceText', 'errorMessage', 'errorText', 'panelContent', 'chevronIcon', 'headerDistance'].forEach(id => els[id] = document.getElementById(id));
-            initMap();
-            setupEvents();
-        });
-
-        function initMap() {
-            map = L.map('map', {
-                worldCopyJump: true, 
-                minZoom: 2, 
-                zoomControl: false,
-                maxBounds: [[-85, -Infinity], [85, Infinity]], 
-                maxBoundsViscosity: 1.0
-            }).setView([20, 0], CONFIG.ZOOM);
-
-            L.tileLayer(CONFIG.TILE, {
-                attribution: '&copy; OpenStreetMap &copy; CARTO',
-                subdomains: 'abcd', maxZoom: 20
-            }).addTo(map);
-
-            L.control.zoom({ position: 'bottomright' }).addTo(map);
-            allPolylines = L.layerGroup().addTo(map);
-        }
-        
-        // --- UI Logic ---
-        function togglePanel() {
-            isPanelOpen = !isPanelOpen;
-            if (isPanelOpen) {
-                // Open
-                els.panelContent.style.maxHeight = '500px';
-                els.panelContent.style.opacity = '1';
-                els.panelContent.style.marginTop = window.innerWidth < 768 ? '0.75rem' : '1rem'; // mt-3 or mt-4
-                els.panelContent.style.marginBottom = '0';
-                els.chevronIcon.classList.remove('rotate-180');
-                els.headerDistance.classList.add('hidden'); // Hide mini distance
-            } else {
-                // Close
-                els.panelContent.style.maxHeight = '0';
-                els.panelContent.style.opacity = '0';
-                els.panelContent.style.marginTop = '0';
-                els.panelContent.style.marginBottom = '0';
-                els.chevronIcon.classList.add('rotate-180');
-                
-                // Show mini distance in header if valid
-                if (els.distanceText.textContent !== "0 miles") {
-                    els.headerDistance.textContent = els.distanceText.textContent;
-                    els.headerDistance.classList.remove('hidden');
-                }
-            }
-        }
-
-        function createIcon(color) {
-            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36" fill="${color}" stroke="white" stroke-width="1.5" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`;
-            return L.divIcon({ html: svg, className: '', iconSize: [36, 36], iconAnchor: [18, 36] });
-        }
-
-        function createMarkers(latlng, color, arr) {
-            arr.forEach(m => map.removeLayer(m));
-            arr.length = 0; 
-            const icon = createIcon(color);
-            for (let i = -3; i <= 3; i++) {
-                const m = L.marker([latlng[0], latlng[1] + (i * 360)], { draggable: true, icon }).addTo(map);
-                m.on('drag', (e) => onDrag(e, arr));
-                arr.push(m);
-            }
-        }
-
-        function onDrag(e, family) {
-            const { lat, lng } = e.target.getLatLng();
-            const clampedLat = Math.max(-85, Math.min(85, lat));
-            let baseLng = lng;
-            while (baseLng > 180) baseLng -= 360;
-            while (baseLng < -180) baseLng += 360;
-
-            family.forEach((m, i) => m.setLatLng([clampedLat, baseLng + ((i - 3) * 360)]));
-            refresh();
-        }
-
-        function getPath(l1, l2) {
-            const points = [];
-            let lon2 = l2.lng;
-            const diff = l2.lng - l1.lng;
-            if (diff > 180) lon2 -= 360;
-            else if (diff < -180) lon2 += 360;
-
-            const lat1 = l1.lat * CONFIG.TO_RAD, lon1 = l1.lng * CONFIG.TO_RAD;
-            const lat2 = l2.lat * CONFIG.TO_RAD, lon2R = lon2 * CONFIG.TO_RAD;
-            const d = Math.acos(Math.sin(lat1) * Math.sin(lat2) + Math.cos(lat1) * Math.cos(lat2) * Math.cos(lon2R - lon1));
-
-            if (Math.abs(d) < 1e-6) return [l1, l2];
-
-            let lastLon = null;
-            for (let i = 0; i <= 100; i++) {
-                const f = i / 100, A = Math.sin((1 - f) * d) / Math.sin(d), B = Math.sin(f * d) / Math.sin(d);
-                const x = A * Math.cos(lat1) * Math.cos(lon1) + B * Math.cos(lat2) * Math.cos(lon2R);
-                const y = A * Math.cos(lat1) * Math.sin(lon1) + B * Math.cos(lat2) * Math.sin(lon2R);
-                const z = A * Math.sin(lat1) + B * Math.sin(lat2);
-                
-                let lon = Math.atan2(y, x) * CONFIG.TO_DEG;
-                if (lastLon !== null) {
-                    if (lon - lastLon > 180) lon -= 360;
-                    else if (lastLon - lon > 180) lon += 360;
-                }
-                
-                let lat = Math.atan2(z, Math.sqrt(x*x + y*y)) * CONFIG.TO_DEG;
-                lat = Math.max(-85, Math.min(85, lat));
-                points.push(L.latLng(lat, lon));
-                lastLon = lon;
-            }
-            return points;
-        }
-
-        function refresh() {
-            allPolylines.clearLayers();
-            if (markers1.length === 0 || markers2.length === 0) {
-                els.distanceText.textContent = "0 miles";
-                if (!isPanelOpen) els.headerDistance.classList.add('hidden');
-                return;
-            }
-
-            const p1 = markers1[0].getLatLng(), p2 = markers2[0].getLatLng();
-            const main = getPath(p1, p2);
-            const opts = { color: '#FFFFFF', weight: 3, opacity: 0.7, dashArray: '5, 10' };
-
-            for (let i = -3; i <= 3; i++) {
-                L.polyline(main.map(p => L.latLng(p.lat, p.lng + (i * 360))), opts).addTo(allPolylines);
-            }
-
-            const dLat = (p2.lat - p1.lat) * CONFIG.TO_RAD, dLon = (p2.lng - p1.lng) * CONFIG.TO_RAD;
-            const a = Math.sin(dLat/2)**2 + Math.sin(dLon/2)**2 * Math.cos(p1.lat * CONFIG.TO_RAD) * Math.cos(p2.lat * CONFIG.TO_RAD);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            
-            const distStr = `${Math.round(CONFIG.R_MI * c).toLocaleString('en-US')} mi (${Math.round(CONFIG.R_KM * c).toLocaleString('en-US')} km)`;
-            els.distanceText.textContent = distStr;
-            
-            // Update header mini-display if collapsed
-            if (!isPanelOpen) {
-                els.headerDistance.textContent = distStr;
-                els.headerDistance.classList.remove('hidden');
-            }
-        }
-
-        function setupEvents() {
-            const bind = (inp, btn, fam, color) => {
-                btn.addEventListener('click', () => search(inp, btn, fam, color));
-                inp.addEventListener('keydown', (e) => e.key === 'Enter' && search(inp, btn, fam, color));
-            };
-            bind(els.input1, els.btn1, markers1, '#3B82F6');
-            bind(els.input2, els.btn2, markers2, '#EF4444');
-        }
-
-        async function search(inp, btn, family, color) {
-            const q = inp.value.trim();
-            if (!q) return;
-
-            const txt = btn.innerText;
-            btn.innerHTML = `<div class="loader ${btn.id === 'btn2' ? 'loader-red' : ''}"></div>`;
-            btn.disabled = true;
-            els.errorMessage.classList.add('hidden');
-
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`);
-                const data = await res.json();
-
-                if (data?.[0]) {
-                    const { lat, lon, display_name } = data[0];
-                    const nLat = parseFloat(lat), nLon = parseFloat(lon);
-                    
-                    if (family.length === 0) {
-                        createMarkers([nLat, nLon], color, family);
-                    } else {
-                        family.forEach((m, i) => m.setLatLng([nLat, nLon + ((i - 3) * 360)]));
-                    }
-
-                    inp.value = display_name.split(',')[0];
-                    refresh();
-                    
-                    if (markers1.length > 0 && markers2.length > 0) {
-                        const bounds = L.latLngBounds(getPath(markers1[0].getLatLng(), markers2[0].getLatLng()));
-                        if (bounds.isValid()) {
-                            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6, animate: true, duration: 1.5 });
-                        }
-                        
-                        // Auto-collapse on mobile after a successful full search (optional UX enhancement)
-                        if (window.innerWidth < 768) {
-                           // Uncomment next line if you want it to auto-close
-                           // togglePanel(); 
-                        }
-                        
-                    } else {
-                        map.setView([nLat, nLon], 5);
-                    }
-
-                } else {
-                    showError('Location not found.');
-                }
-            } catch (e) { showError('Search failed.'); } 
-            finally { btn.innerText = txt; btn.disabled = false; }
-        }
-
-        function showError(msg) {
-            if (errorTimeout) clearTimeout(errorTimeout);
-            els.errorText.textContent = msg;
-            els.errorMessage.classList.remove('hidden');
-            errorTimeout = setTimeout(() => els.errorMessage.classList.add('hidden'), 3000);
-        }
-
-        function resetMap() {
-            if (errorTimeout) clearTimeout(errorTimeout);
-            els.errorMessage.classList.add('hidden');
-
-            els.input1.value = els.input2.value = '';
-            [...markers1, ...markers2].forEach(m => map.removeLayer(m));
-            markers1.length = 0;
-            markers2.length = 0;
-            
-            refresh();
-            map.setView([20, 0], CONFIG.ZOOM);
-            
-            // Open panel if it was closed
-            if (!isPanelOpen) togglePanel();
-        }
-    </script>
 </body>
 </html>
