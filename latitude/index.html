@@ -59,13 +59,13 @@
             background: #0a0a0a !important; color: #f5f5f5 !important; border: 1px solid #333 !important;
         }
         .custom-pin { background: transparent; border: none; }
-        
         @media (max-width: 768px) { .leaflet-control-zoom { display: none !important; } }
 
         /* Animation & Loader */
         .rotate-180 { transform: rotate(180deg); }
         .loader {
-            border: 2px solid #e5e5e5; border-top: 2px solid #10b981; /* Emerald for Latitude */
+            border: 2px solid #404040;
+            border-top: 2px solid #ffffff;
             border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -92,7 +92,6 @@
             <div class="flex items-center justify-between mb-0">
                 <div class="flex items-center gap-2 overflow-hidden">
                     <div class="p-1.5 bg-neutral-800 rounded-lg shrink-0">
-                        <!-- Latitude Icon -->
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     </div>
                     <div class="flex flex-col">
@@ -116,14 +115,8 @@
                 
                 <!-- Search Input -->
                 <div class="mb-4 relative group">
-                    <!-- Emerald Dot -->
                     <div class="absolute left-3.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
-                    
-                    <!-- Input with Emerald Focus Ring -->
                     <input type="text" id="searchInput" aria-label="Search City" placeholder="Enter city (e.g. Paris)" class="w-full pl-8 pr-20 py-2.5 bg-neutral-900/50 border border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-base text-white placeholder-neutral-500 focus:bg-neutral-900">
-                    
-                    <!-- Find Button (Fixed Dimensions) -->
-                    <!-- FIXED: Added w-[52px] h-[26px] for rigid shape stability. Removed inline onclick. Changed type to button. -->
                     <button type="button" id="searchBtn" aria-label="Find Location" class="absolute right-2 top-1/2 -translate-y-1/2 bg-white hover:bg-neutral-200 text-black text-xs font-bold rounded-md transition-colors flex items-center justify-center shadow-lg shadow-black/20 w-[52px] h-[26px]">Find</button>
                 </div>
 
@@ -131,7 +124,6 @@
                 <div id="resultPanel" class="pt-3 md:pt-4 border-t border-white/10" aria-live="polite">
                     <div class="flex justify-between items-center">
                         <h2 class="text-xs font-bold text-neutral-400 uppercase tracking-wide">Latitude</h2>
-                        <!-- FIXED: Changed select-none to select-text to allow copying -->
                         <div class="flex items-center gap-2 text-sm font-bold text-white bg-neutral-800 border border-neutral-700 px-3 py-1.5 rounded-lg select-text font-mono">
                             <span id="latText">0.00°</span>
                         </div>
@@ -148,33 +140,32 @@
     </div>
 
     <script>
+        // --- Configuration ---
         const CONFIG = {
             ZOOM: 2,
+            COORDS: [20, 0],
             TILE: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-            MAX_BOUNDS: [[-85, -Infinity], [85, Infinity]]
+            MAX_BOUNDS: [[-85, -Infinity], [85, Infinity]],
+            WORLD_COPIES: 3,
+            LAT_COLOR: '#10b981'
         };
-        
-        // UPDATED: Exact pin shape from measure.html, but white with a dark stroke
-        const whiteIcon = L.divIcon({
-            className: '', // Ensures no default white square background
-            html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36" fill="white" stroke="#111" stroke-width="1.5" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`,
-            iconSize: [36, 36], 
-            iconAnchor: [18, 36], 
-            popupAnchor: [0, -36]
-        });
 
+        const PIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36" fill="white" stroke="#111" stroke-width="1.5" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`;
+        const PIN_ICON = L.divIcon({ className: '', html: PIN_SVG, iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36] });
+
+        // --- Global State ---
         let map, currentLayerGroup;
         const els = {};
         let errorTimeout, isPanelOpen = true;
 
         document.addEventListener('DOMContentLoaded', () => {
-            ['searchInput', 'searchBtn', 'latText', 'errorMessage', 'errorText', 
-             'panelContent', 'chevronIcon', 'headerLat'].forEach(id => els[id] = document.getElementById(id));
+            ['searchInput', 'searchBtn', 'latText', 'errorMessage', 'errorText', 'panelContent', 'chevronIcon', 'headerLat'].forEach(id => els[id] = document.getElementById(id));
             
             initMap();
             setupEvents();
             updateIconState();
             
+            // Safe-guard against scroll on resize/keyboard
             window.addEventListener('resize', () => {
                 updateIconState();
                 if (window.scrollY > 0) window.scrollTo(0, 0);
@@ -183,9 +174,10 @@
 
         function initMap() {
             map = L.map('map', {
-                worldCopyJump: true, minZoom: 2, zoomControl: false,
+                worldCopyJump: false, // Manual wrapping used instead
+                minZoom: 2, zoomControl: false,
                 maxBounds: CONFIG.MAX_BOUNDS, maxBoundsViscosity: 1.0
-            }).setView([20, 0], CONFIG.ZOOM);
+            }).setView(CONFIG.COORDS, CONFIG.ZOOM);
 
             L.tileLayer(CONFIG.TILE, { attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 20 }).addTo(map);
             L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -198,15 +190,10 @@
             const mobile = window.innerWidth < 1024;
             
             if (isPanelOpen) {
-                Object.assign(els.panelContent.style, {
-                    maxHeight: mobile ? '60vh' : '500px', opacity: '1',
-                    marginTop: mobile ? '0.75rem' : '1rem', marginBottom: '0'
-                });
+                Object.assign(els.panelContent.style, { maxHeight: mobile ? '60vh' : '500px', opacity: '1', marginTop: mobile ? '0.75rem' : '1rem', marginBottom: '0' });
                 els.headerLat.classList.add('hidden');
             } else {
-                Object.assign(els.panelContent.style, {
-                    maxHeight: '0', opacity: '0', marginTop: '0', marginBottom: '0'
-                });
+                Object.assign(els.panelContent.style, { maxHeight: '0', opacity: '0', marginTop: '0', marginBottom: '0' });
                 if (els.latText.textContent !== "0.00°") {
                     els.headerLat.textContent = els.latText.textContent;
                     els.headerLat.classList.remove('hidden');
@@ -217,8 +204,7 @@
 
         function updateIconState() {
             const isMobile = window.innerWidth < 1024;
-            const shouldRotate = isPanelOpen ? isMobile : !isMobile;
-            els.chevronIcon.classList.toggle('rotate-180', shouldRotate);
+            els.chevronIcon.classList.toggle('rotate-180', isPanelOpen ? isMobile : !isMobile);
         }
 
         function setupEvents() {
@@ -226,7 +212,7 @@
             els.searchInput.addEventListener('keydown', (e) => e.key === 'Enter' && handleSearch());
         }
 
-        // --- Core Application Logic ---
+        // --- Application Logic ---
         async function handleSearch() {
             const q = els.searchInput.value.trim();
             if (!q) return;
@@ -243,12 +229,9 @@
                 if (data?.[0]) {
                     const { lat, lon, display_name } = data[0];
                     const nLat = parseFloat(lat), nLon = parseFloat(lon);
-                    const name = display_name.split(',')[0];
-
-                    updateMap(nLat, nLon, name);
                     
-                    // Keep city name in search box to indicate active state
-                    els.searchInput.value = name;
+                    updateMap(nLat, nLon, display_name.split(',')[0]);
+                    els.searchInput.value = display_name.split(',')[0];
                 } else {
                     showError('Location not found.');
                 }
@@ -259,24 +242,24 @@
         function updateMap(lat, lon, name) {
             currentLayerGroup.clearLayers();
             
-            // Draw Latitude Line
-            L.polyline([[lat, -360], [lat, 360]], { 
-                color: '#10b981', // Emerald green
-                weight: 2, 
-                opacity: 0.8, 
-                dashArray: '5, 10' 
-            }).addTo(currentLayerGroup);
-
-            // Draw Marker
-            L.marker([lat, lon], { icon: whiteIcon })
-                .bindPopup(`<b>${name}</b><br>Lat: ${lat.toFixed(4)}`)
-                .openPopup()
-                .addTo(currentLayerGroup);
-
-            // Update UI
-            els.latText.textContent = lat.toFixed(4) + '°';
+            // Infinite Latitude Lines & Markers
+            const linePoints = [];
+            for (let i = -CONFIG.WORLD_COPIES; i <= CONFIG.WORLD_COPIES; i++) {
+                const offset = i * 360;
+                // Line segment for this world copy
+                linePoints.push([[lat, -180 + offset], [lat, 180 + offset]]);
+                
+                // Marker for this world copy
+                const marker = L.marker([lat, lon + offset], { icon: PIN_ICON })
+                    .bindPopup(`<b>${name}</b><br>Lat: ${lat.toFixed(4)}`)
+                    .addTo(currentLayerGroup);
+                
+                if (i === 0) marker.openPopup();
+            }
             
-            // View Update
+            L.polyline(linePoints, { color: CONFIG.LAT_COLOR, weight: 2, opacity: 0.8, dashArray: '5, 10' }).addTo(currentLayerGroup);
+
+            els.latText.textContent = lat.toFixed(4) + '°';
             map.setView([lat, lon], 5, { animate: true });
         }
 
@@ -295,7 +278,7 @@
             currentLayerGroup.clearLayers();
             els.latText.textContent = "0.00°";
             
-            map.setView([20, 0], CONFIG.ZOOM);
+            map.setView(CONFIG.COORDS, CONFIG.ZOOM);
             if (!isPanelOpen) togglePanel();
         }
     </script>
