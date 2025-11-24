@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- FIXED: Added viewport-fit=cover for proper full-screen rendering on iPhones -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="Calculate the distance between two points on a global map.">
     <title>Distance Calculator</title>
     
@@ -64,10 +65,33 @@
         /* Mobile optimization for collapsed state */
         .rotate-180 { transform: rotate(180deg); }
 
-        /* NEW: Hide zoom controls on mobile devices to save space */
+        /* Hide zoom controls on mobile devices */
         @media (max-width: 768px) {
-            .leaflet-control-zoom {
-                display: none !important;
+            .leaflet-control-zoom { display: none !important; }
+        }
+
+        /* FIXED: Custom positioning class for the main panel */
+        .panel-position {
+            position: absolute;
+            left: 1rem; /* left-4 */
+            width: calc(100% - 2rem);
+            max-width: 24rem; /* max-w-sm */
+            z-index: 1000;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            
+            /* Mobile Default: Bottom with Safe Area support */
+            /* This puts it exactly 0.5rem above the home swipe indicator */
+            bottom: calc(0.5rem + env(safe-area-inset-bottom));
+            top: auto;
+        }
+
+        /* Desktop Override (LG and up to avoid Pro Max landscape issues) */
+        @media (min-width: 1024px) {
+            .panel-position {
+                top: 1rem;
+                bottom: auto;
+                width: 24rem; /* w-96 */
             }
         }
     </style>
@@ -76,9 +100,8 @@
 
     <div id="map"></div>
 
-    <!-- Responsive Container: Bottom on Mobile, Top Left on Desktop -->
-    <!-- FIXED: Changed bottom-8 to bottom-4 to sit lower on the screen -->
-    <div class="absolute bottom-4 left-4 w-[calc(100%-2rem)] max-w-sm md:top-4 md:bottom-auto md:w-96 z-[1000] pointer-events-none transition-all duration-300">
+    <!-- Responsive Container using custom .panel-position class -->
+    <div class="panel-position">
         <div class="glass-panel rounded-xl p-3 md:p-4 pointer-events-auto shadow-2xl overflow-hidden">
             
             <!-- Header Row -->
@@ -87,10 +110,9 @@
                     <div class="p-1.5 bg-neutral-800 rounded-lg shrink-0">
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
                     </div>
-                    <!-- Title restored to 'Distance Calculator' -->
+                    <!-- Title -->
                     <div class="flex flex-col">
                         <h1 class="text-sm md:text-base font-bold text-white truncate leading-tight">Distance Calculator</h1>
-                        <!-- FIXED: Increased text size for desktop readability (md:text-sm) -->
                         <span id="headerDistance" class="text-xs md:text-sm font-bold text-blue-400 font-mono hidden">0 mi</span>
                     </div>
                 </div>
@@ -107,13 +129,11 @@
             </div>
 
             <!-- Collapsible Content -->
-            <!-- FIXED: Added max-h-[60vh] for mobile safety, overflow-y-auto for scrolling on small screens -->
             <div id="panelContent" class="transition-all duration-300 ease-in-out max-h-[60vh] md:max-h-[500px] overflow-y-auto opacity-100 mt-3 md:mt-4">
                 
                 <!-- Input 1 (Blue) -->
                 <div class="mb-3 relative group">
                     <div class="absolute left-3.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>
-                    <!-- FIXED: Changed text-sm to text-base to prevent mobile auto-zoom -->
                     <input type="text" id="input1" aria-label="Location A" placeholder="Point A (e.g., New York)" class="w-full pl-8 pr-16 py-2 bg-neutral-900/50 border border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-base text-white placeholder-neutral-500 focus:bg-neutral-900">
                     <button id="btn1" aria-label="Find Location A" class="absolute right-1.5 top-1.5 bg-white hover:bg-neutral-200 text-black text-[10px] font-bold px-2 py-1.5 rounded transition-colors shadow-lg shadow-black/20">
                         Find
@@ -123,7 +143,6 @@
                 <!-- Input 2 (Red) -->
                 <div class="mb-4 relative group">
                     <div class="absolute left-3.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>
-                    <!-- FIXED: Changed text-sm to text-base to prevent mobile auto-zoom -->
                     <input type="text" id="input2" aria-label="Location B" placeholder="Point B (e.g., London)" class="w-full pl-8 pr-16 py-2 bg-neutral-900/50 border border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all text-base text-white placeholder-neutral-500 focus:bg-neutral-900">
                     <button id="btn2" aria-label="Find Location B" class="absolute right-1.5 top-1.5 bg-white hover:bg-neutral-200 text-black text-[10px] font-bold px-2 py-1.5 rounded transition-colors shadow-lg shadow-black/20">
                         Find
@@ -168,7 +187,6 @@
             ['input1', 'btn1', 'input2', 'btn2', 'distanceText', 'errorMessage', 'errorText', 'panelContent', 'chevronIcon', 'headerDistance'].forEach(id => els[id] = document.getElementById(id));
             initMap();
             setupEvents();
-            // Initial UI state update
             updateIconState();
             window.addEventListener('resize', updateIconState);
         });
@@ -191,15 +209,14 @@
             allPolylines = L.layerGroup().addTo(map);
         }
         
-        // --- UI Logic ---
         function togglePanel() {
             isPanelOpen = !isPanelOpen;
             
             if (isPanelOpen) {
                 // Open
-                els.panelContent.style.maxHeight = window.innerWidth < 768 ? '60vh' : '500px';
+                els.panelContent.style.maxHeight = window.innerWidth < 1024 ? '60vh' : '500px';
                 els.panelContent.style.opacity = '1';
-                els.panelContent.style.marginTop = window.innerWidth < 768 ? '0.75rem' : '1rem'; 
+                els.panelContent.style.marginTop = window.innerWidth < 1024 ? '0.75rem' : '1rem'; 
                 els.panelContent.style.marginBottom = '0';
                 els.headerDistance.classList.add('hidden'); 
             } else {
@@ -209,7 +226,6 @@
                 els.panelContent.style.marginTop = '0';
                 els.panelContent.style.marginBottom = '0';
                 
-                // Show mini distance in header if valid
                 if (els.distanceText.textContent !== "0 miles") {
                     els.headerDistance.textContent = els.distanceText.textContent;
                     els.headerDistance.classList.remove('hidden');
@@ -218,13 +234,9 @@
             updateIconState();
         }
 
-        // Updates arrow direction based on Mobile (Bottom) vs Desktop (Top)
         function updateIconState() {
-            const isMobile = window.innerWidth < 768;
-            
-            // Logic:
-            // Desktop (Top): Open = Up Arrow (Normal), Closed = Down Arrow (180)
-            // Mobile (Bottom): Open = Down Arrow (180), Closed = Up Arrow (Normal)
+            // Using 1024 as the breakpoint for mobile behavior
+            const isMobile = window.innerWidth < 1024;
             
             if (isPanelOpen) {
                 if (isMobile) els.chevronIcon.classList.add('rotate-180');
@@ -319,7 +331,6 @@
             const distStr = `${Math.round(CONFIG.R_MI * c).toLocaleString('en-US')} mi (${Math.round(CONFIG.R_KM * c).toLocaleString('en-US')} km)`;
             els.distanceText.textContent = distStr;
             
-            // Update header mini-display if collapsed
             if (!isPanelOpen) {
                 els.headerDistance.textContent = distStr;
                 els.headerDistance.classList.remove('hidden');
@@ -395,8 +406,6 @@
             
             refresh();
             map.setView([20, 0], CONFIG.ZOOM);
-            
-            // Open panel if it was closed
             if (!isPanelOpen) togglePanel();
         }
     </script>
